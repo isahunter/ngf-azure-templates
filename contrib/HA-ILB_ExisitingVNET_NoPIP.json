@@ -126,6 +126,10 @@
       "name": "[variables('ilbName')]",
       "apiVersion": "[variables('apiVersionLB')]",
       "location": "[resourceGroup().location]",
+      "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
       "properties": {
         "frontendIPConfigurations": [
           {
@@ -148,10 +152,7 @@
           {
             "name": "lbrule",
             "properties": {
-              "sku": {
-                "name": "Standard",
-                "tier": "Regional"
-              },
+
               "frontendIPConfiguration": {
                 "id": "[concat( resourceId('Microsoft.Network/loadBalancers', variables('ilbName')), '/frontendIpConfigurations/InternalLoadBalancerVIP' )]"
               },
