@@ -15,6 +15,10 @@
       "defaultValue": ""
     },
     "ilbProbePort": {
+                 "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
       "type": "int",
       "defaultValue": 65500
     }
