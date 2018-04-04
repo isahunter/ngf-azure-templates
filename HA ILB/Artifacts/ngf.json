@@ -48,6 +48,10 @@
       "apiVersionVM": "2017-03-30",
       "apiVersionNetwork": "2017-06-01",
       "ngfName1": "[concat( parameters('prefix'), '-NGF')]",
+                  "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
       "ngfName2": "[concat( parameters('prefix'), '-NGF-HA')]",
       "ngfAsName": "[concat( parameters( 'prefix' ), '-haSet')]",
       "ngfNicName1": "[concat( variables('ngfName1'), '_nic0_', uniqueString( resourceGroup().id ))]",
