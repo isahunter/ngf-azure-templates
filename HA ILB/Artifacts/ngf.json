@@ -46,7 +46,7 @@
     "variables": {
       "apiVersionAS": "2017-03-30",
       "apiVersionVM": "2017-03-30",
-      "apiVersionNetwork": "2017-06-01",
+      "apiVersionNetwork": "2018-01-01",
       "ngfName1": "[concat( parameters('prefix'), '-NGF')]",
       "ngfName2": "[concat( parameters('prefix'), '-NGF-HA')]",
       "ngfAsName": "[concat( parameters( 'prefix' ), '-haSet')]",
