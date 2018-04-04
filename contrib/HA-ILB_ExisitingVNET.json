@@ -1,386 +1,232 @@
 {
-
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-
-  "contentVersion": "0.0.1",
-
-  "parameters": {
-
-    "deploymentPrefix": {
-
-      "type": "string",
-
-      "defaultValue": "bam-ha-ilb",
-
-      "metadata": {
-
-        "description": "Prefix to be prepended to all created resources."
-
-      }
-
-    },
-
-    "ilbAddr": {
-
-      "type": "string",
-
-      "defaultValue": "172.16.25.254",
-
-      "metadata": {
-
-        "description": "Static Private IP Address of Azure ILB."
-
-      }
-
-    },
-
-    "prefix": {
-
-      "type": "string",
-
-      "defaultValue": "ngf-hailb",
-
-      "metadata": {
-
-        "description": "Prefix to be prepended to all created resources."
-
-      }
-
-    },
-
-    "sizeNGF": {
-
-      "type": "string",
-
-      "defaultValue": "Standard_F1s",
-
-      "metadata": {
-
-        "description": "Size of the NGF VMs."
-
-      }
-
-    },
-
-    "ngfPassword": {
-
-      "type": "secureString",
-
-      "metadata": {
-
-        "description": "Admin Password of NGF VMs."
-
-      }
-
-    },
-
-    "ngfIpAddr1": {
-
-      "type": "string",
-
-      "defaultValue": "172.16.25.4",
-
-      "metadata": {
-
-        "description": "Private IP Address of NGF VM #1."
-
-      }
-
-    },
-
-    "ngfIpMask": {
-
-      "type": "string",
-
-      "defaultValue": "24",
-
-      "metadata": {
-
-        "description": "CIDR Subnet Mask Value (Only Integers no slash) i.e. /24, /23, /22, etc..."
-
-      }
-
-    },
-
-    "ngfIpGw": {
-
-      "type": "string",
-
-      "defaultValue": "172.16.25.1",
-
-      "metadata": {
-
-        "description": "Default Gateway IP Address for the NGF VMs Subnet (The Second IP Address of the Subnet i.e. Subnet 10.0.0.0/24 would have a Default Gateway IP of 10.0.0.1)."
-
-      }
-
-    },
-
-    "ngfIpAddr2": {
-
-      "type": "string",
-
-      "defaultValue": "172.16.25.5",
-
-      "metadata": {
-
-        "description": "Private IP Address of NGF VM #2 (HA Standby NGF VM)."
-
-      }
-
-    },
-    "VNETName": {
-
-      "type": "string",
-
-      "defaultValue": "Enter Name of Existing VNET where the NGF VMs will Reside"
-
-    },
-
-    "VNETRG": {
-
-      "type": "string",
-
-      "defaultValue": "Enter Name of Existing VNET Resource Group where the NGF VMs will Reside"
-
-    },
-
-    "Subnet": {
-
-      "type": "string",
-
-      "defaultValue": "Enter Name of Existing Subnet where the NGF VMs will Reside"
-
-    },
-
-    "firewallInstanceSize": {
-
-      "type": "string",
-
-      "defaultValue": "Standard_F1s",
-
-      "allowedValues": [ "Standard_F1s", "Standard_F2s", "Standard_F4s", "Standard_F8s", "Standard_D1_v2", "Standard_D2_v2", "Standard_D4_v2", "Standard_D8_v2" ],
-
-      "metadata": {
-
-        "description": "Choose instance size maching your license and needs"
-
-      }
-
-    },
-
-    "rootPassword": {
-
-      "type": "secureString",
-
-      "metadata": {
-
-        "description": "Administrative password for NextGen Firewall instances"
-
-      }
-
-    },
-
-    "publicIpAllocationMethod": {
-
-      "type": "string",
-
-      "defaultValue": "Static",
-
-      "allowedValues": [ "Dynamic", "Static" ]
-
-    },
-
-    "ilbProbePort": {
-
-      "type": "int",
-
-      "defaultValue": 691,
-
-      "maxValue": 65535,
-
-      "metadata": {
-
-        "description": "Internal Load Balancer will use this port to probe NGF instances."
-
-      }
-
-    },
-
-    "firewallSubnetAddress": {
-
-      "type": "string",
-
-      "defaultValue": "172.16.25.0/24",
-
-      "minLength": 9,
-
-      "metadata": {
-
-        "description": "Subnet address for hosting firewalls. Do not use subnets smaller than /29"
-
-      }
-
-    },
-
-    "tier1SubnetAddress": {
-
-      "type": "string",
-
-      "defaultValue": "172.16.26.0/24",
-
-      "minLength": 9,
-
-      "metadata": {
-
-        "description": "Subnet 1 address for multi-tier."
-
-      }
-
-    },
-
-    "tier2SubnetAddress": {
-
-      "type": "string",
-
-      "defaultValue": "172.16.27.0/24",
-
-      "minLength": 9,
-
-      "metadata": {
-
-        "description": "Subnet 2 address for multi-tier."
-
-      }
-
-    }
-
-
-
-  },
-
-  "variables": {
-
-    "apiVersionDeployments": "2017-05-01",
-
-    "apiNetwork": "2018-01-01",
-
-    "urlBase": "https://raw.githubusercontent.com/isahunter/ngf-azure-templates/master/HA%20ILB/Artifacts/",
-
-    "netId-gw": "[concat(variables('vnetId'), '/subnets/', parameters('Subnet'))]",
-
-    "netGwCidrSplit": "[split( parameters( 'firewallSubnetAddress' ), '/' )]",
-
-    "netGwAddrSplit": "[split( variables( 'netGwCidrSplit' )[0], '.' )]",
-
-    "netGwMask": "[variables( 'netGwCidrSplit' )[1]]",
-
-    "netGwDefaultGw": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 1 ))]",
-
-    "ngfIpAddr1": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 4 ))]",
-
-    "ngfIpAddr2": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 5 ))]",
-
-    "ilbAddr": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 6 ))]",
-    
-    "vnetId": "[resourceId(parameters('VNETRG'),'Microsoft.Network/virtualNetworks', parameters('VNETName'))]"
-
-  },
-
-  "resources": [
-
-       {
-
-      "apiVersion": "[variables('apiVersionDeployments')]",
-
-      "type": "Microsoft.Resources/deployments",
-
-      "name": "Firewalls",
-
-      "properties": {
-
-        "templateLink": {
-
-          "uri": "[concat( variables( 'urlBase' ), 'ngf.json' )]"
-
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "0.0.1",
+    "parameters": {
+        "deploymentPrefix": {
+            "defaultValue": "bam-ha-ilb",
+            "type": "String",
+            "metadata": {
+                "description": "Prefix to be prepended to all created resources."
+            }
         },
-
-        "parameters": {
-
-          "prefix": { "value": "[parameters( 'deploymentPrefix' )]" },
-
-          "sizeNGF": { "value": "[parameters( 'firewallInstanceSize' )]" },
-
-          "ngfPassword": { "value": "[parameters( 'rootPassword' )]" },
-
-          "ngfIpAddr1": { "value": "[parameters( 'ngfIpAddr1' )]" },
-
-          "ngfIpAddr2": { "value": "[parameters( 'ngfIpAddr2' )]" },
-
-          "ngfIpMask": { "value": "[parameters( 'netGwMask' )]" },
-
-          "ngfIpGw": { "value": "[parameters( 'netGwDefaultGw' )]" },
-
-          "netId-gw": { "value": "[variables( 'netId-gw' )]" },
-
-          "ilbName": { "value": "[concat( parameters('deploymentPrefix'), '-ilb' )]" },
-
-          "pipAllocationMethod": { "value": "[parameters( 'publicIpAllocationMethod' )]" }
-
+        "ilbAddr": {
+            "defaultValue": "172.16.25.254",
+            "type": "String",
+            "metadata": {
+                "description": "Static Private IP Address of Azure ILB."
+            }
         },
-
-        "mode": "Incremental"
-
-      },
-
-      "dependsOn": [
-
-        "[resourceId( 'Microsoft.Resources/deployments', 'ILB' )]"
-
-      ]
-
+        "prefix": {
+            "defaultValue": "ngf-hailb",
+            "type": "String",
+            "metadata": {
+                "description": "Prefix to be prepended to all created resources."
+            }
+        },
+        "sizeNGF": {
+            "defaultValue": "Standard_F1s",
+            "type": "String",
+            "metadata": {
+                "description": "Size of the NGF VMs."
+            }
+        },
+        "ngfPassword": {
+            "type": "SecureString",
+            "metadata": {
+                "description": "Admin Password of NGF VMs."
+            }
+        },
+        "ngfIpAddr1": {
+            "defaultValue": "172.16.25.4",
+            "type": "String",
+            "metadata": {
+                "description": "Private IP Address of NGF VM #1."
+            }
+        },
+        "ngfIpMask": {
+            "defaultValue": "24",
+            "type": "String",
+            "metadata": {
+                "description": "CIDR Subnet Mask Value (Only Integers no slash) i.e. /24, /23, /22, etc..."
+            }
+        },
+        "ngfIpGw": {
+            "defaultValue": "172.16.25.1",
+            "type": "String",
+            "metadata": {
+                "description": "Default Gateway IP Address for the NGF VMs Subnet (The Second IP Address of the Subnet i.e. Subnet 10.0.0.0/24 would have a Default Gateway IP of 10.0.0.1)."
+            }
+        },
+        "ngfIpAddr2": {
+            "defaultValue": "172.16.25.5",
+            "type": "String",
+            "metadata": {
+                "description": "Private IP Address of NGF VM #2 (HA Standby NGF VM)."
+            }
+        },
+        "VNETName": {
+            "defaultValue": "Enter Name of Existing VNET where the NGF VMs will Reside",
+            "type": "String"
+        },
+        "VNETRG": {
+            "defaultValue": "Enter Name of Existing VNET Resource Group where the NGF VMs will Reside",
+            "type": "String"
+        },
+        "Subnet": {
+            "defaultValue": "Enter Name of Existing Subnet where the NGF VMs will Reside",
+            "type": "String"
+        },
+        "firewallInstanceSize": {
+            "defaultValue": "Standard_F1s",
+            "allowedValues": [
+                "Standard_F1s",
+                "Standard_F2s",
+                "Standard_F4s",
+                "Standard_F8s",
+                "Standard_D1_v2",
+                "Standard_D2_v2",
+                "Standard_D4_v2",
+                "Standard_D8_v2"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "Choose instance size maching your license and needs"
+            }
+        },
+        "rootPassword": {
+            "type": "SecureString",
+            "metadata": {
+                "description": "Administrative password for NextGen Firewall instances"
+            }
+        },
+        "publicIpAllocationMethod": {
+            "defaultValue": "Static",
+            "allowedValues": [
+                "Dynamic",
+                "Static"
+            ],
+            "type": "String"
+        },
+        "ilbProbePort": {
+            "defaultValue": 691,
+            "maxValue": 65535,
+            "type": "Int",
+            "metadata": {
+                "description": "Internal Load Balancer will use this port to probe NGF instances."
+            }
+        },
+        "firewallSubnetAddress": {
+            "defaultValue": "172.16.25.0/24",
+            "minLength": 9,
+            "type": "String",
+            "metadata": {
+                "description": "Subnet address for hosting firewalls. Do not use subnets smaller than /29"
+            }
+        },
+        "tier1SubnetAddress": {
+            "defaultValue": "172.16.26.0/24",
+            "minLength": 9,
+            "type": "String",
+            "metadata": {
+                "description": "Subnet 1 address for multi-tier."
+            }
+        },
+        "tier2SubnetAddress": {
+            "defaultValue": "172.16.27.0/24",
+            "minLength": 9,
+            "type": "String",
+            "metadata": {
+                "description": "Subnet 2 address for multi-tier."
+            }
+        }
     },
-
-    {
-
-      "apiVersion": "[variables('apiVersionDeployments')]",
-
-      "type": "Microsoft.Resources/deployments",
-
-      "name": "ILB",
-
-      "properties": {
-
-        "templateLink": {
-
-          "uri": "[concat( variables( 'urlBase' ), 'ilb.json' )]"
-
+    "variables": {
+        "apiVersionDeployments": "2017-05-01",
+        "apiNetwork": "2018-01-01",
+        "urlBase": "https://raw.githubusercontent.com/isahunter/ngf-azure-templates/master/HA%20ILB/Artifacts/",
+        "netId-gw": "[concat(variables('vnetId'), '/subnets/', parameters('Subnet'))]",
+        "netGwCidrSplit": "[split( parameters( 'firewallSubnetAddress' ), '/' )]",
+        "netGwAddrSplit": "[split( variables( 'netGwCidrSplit' )[0], '.' )]",
+        "netGwMask": "[variables( 'netGwCidrSplit' )[1]]",
+        "netGwDefaultGw": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 1 ))]",
+        "ngfIpAddr1": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 4 ))]",
+        "ngfIpAddr2": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 5 ))]",
+        "ilbAddr": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 6 ))]",
+        "vnetId": "[resourceId(parameters('VNETRG'),'Microsoft.Network/virtualNetworks', parameters('VNETName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "Firewalls",
+            "apiVersion": "[variables('apiVersionDeployments')]",
+            "properties": {
+                "templateLink": {
+                    "uri": "[concat( variables( 'urlBase' ), 'ngf.json' )]"
+                },
+                "parameters": {
+                    "prefix": {
+                        "value": "[parameters( 'deploymentPrefix' )]"
+                    },
+                    "sizeNGF": {
+                        "value": "[parameters( 'firewallInstanceSize' )]"
+                    },
+                    "ngfPassword": {
+                        "value": "[parameters( 'rootPassword' )]"
+                    },
+                    "ngfIpAddr1": {
+                        "value": "[parameters( 'ngfIpAddr1' )]"
+                    },
+                    "ngfIpAddr2": {
+                        "value": "[parameters( 'ngfIpAddr2' )]"
+                    },
+                    "ngfIpMask": {
+                        "value": "[parameters( 'ngfIpMask' )]"
+                    },
+                    "ngfIpGw": {
+                        "value": "[parameters( 'ngfIpGw' )]"
+                    },
+                    "netId-gw": {
+                        "value": "[variables( 'netId-gw' )]"
+                    },
+                    "ilbName": {
+                        "value": "[concat( parameters('deploymentPrefix'), '-ilb' )]"
+                    },
+                    "pipAllocationMethod": {
+                        "value": "[parameters( 'publicIpAllocationMethod' )]"
+                    }
+                },
+                "mode": "Incremental"
+            },
+            "dependsOn": [
+                "[resourceId( 'Microsoft.Resources/deployments', 'ILB' )]"
+            ]
         },
-
-        "parameters": {
-
-          "ilbAddr": { "value": "[parameters( 'ilbAddr' )]" },
-
-          "ilbProbePort": { "value": "[parameters( 'ilbProbePort' )]" },
-
-          "prefix": { "value": "[parameters('deploymentPrefix')]" },
-
-          "netId-gw": { "value": "[variables( 'netId-gw' )]" }
-
-        },
-
-        "mode": "Incremental"
-
-      },
-
-      "dependsOn": [
-
-      ]
-
-    }
-
-  ],
-
-  "outputs": {}
-
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "ILB",
+            "apiVersion": "[variables('apiVersionDeployments')]",
+            "properties": {
+                "templateLink": {
+                    "uri": "[concat( variables( 'urlBase' ), 'ilb.json' )]"
+                },
+                "parameters": {
+                    "ilbAddr": {
+                        "value": "[parameters( 'ilbAddr' )]"
+                    },
+                    "ilbProbePort": {
+                        "value": "[parameters( 'ilbProbePort' )]"
+                    },
+                    "prefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    },
+                    "netId-gw": {
+                        "value": "[variables( 'netId-gw' )]"
+                    }
+                },
+                "mode": "Incremental"
+            },
+            "dependsOn": []
+        }
+    ],
+    "outputs": {}
 }
