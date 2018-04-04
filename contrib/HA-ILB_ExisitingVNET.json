@@ -48,22 +48,6 @@
 
     },
 
-
-
-    "ilbProbePort": {
-
-      "type": "int",
-
-      "defaultValue": 691,
-
-      "metadata": {
-
-        "description": "Health Probe Port of Azure ILB."
-
-      }
-
-    },
-
     "sizeNGF": {
 
       "type": "string",
