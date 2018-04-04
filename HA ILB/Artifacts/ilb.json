@@ -15,10 +15,7 @@
       "defaultValue": ""
     },
     "ilbProbePort": {
-                 "sku": {
-                "name": "Standard",
-                "tier": "Regional"
-            },
+
       "type": "int",
       "defaultValue": 65500
     }
@@ -37,6 +34,10 @@
         "name": "[variables('ilbName')]",
         "apiVersion": "[variables('apiVersionLB')]",
         "location": "[resourceGroup().location]",
+                       "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
         "properties": {
             "frontendIPConfigurations": [
                 {
