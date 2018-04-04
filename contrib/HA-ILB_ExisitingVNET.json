@@ -299,7 +299,7 @@
 
     "ilbAddr": "[concat( variables( 'netGwAddrSplit' )[0], '.', variables( 'netGwAddrSplit' )[1], '.', variables( 'netGwAddrSplit' )[2], '.', add( int( variables( 'netGwAddrSplit' )[3]), 6 ))]",
     
-    "vnetId": "[resourceId(parameters('VNETRG'),'Microsoft.Network/virtualNetworks', parameters('VNETName'))]",
+    "vnetId": "[resourceId(parameters('VNETRG'),'Microsoft.Network/virtualNetworks', parameters('VNETName'))]"
 
   },
 
@@ -351,7 +351,7 @@
 
       "dependsOn": [
 
-        "[resourceId( 'Microsoft.Resources/deployments', 'ILB' )]",
+        "[resourceId( 'Microsoft.Resources/deployments', 'ILB' )]"
 
       ]
 
